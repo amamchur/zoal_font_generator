@@ -7,7 +7,8 @@
 #include <iostream>
 #include <iomanip>
 #include <cstring>
-#include "roboto_regular_24.hpp"
+#include "roboto_regular_16.hpp"
+#include "types.hpp"
 
 constexpr int map_width = 24;
 constexpr int map_height = 100;
@@ -95,10 +96,64 @@ public:
 };
 
 
+int8_t get_kerning(const zoal::text::font &font, uint16_t f, uint16_t s) {
+    if (font.kerning_pairs_count == 0) {
+        return 0;
+    }
+
+    auto l = font.kerning_pairs;
+    auto r = l + font.kerning_pairs_count - 1;
+    const zoal::text::kerning_pair *k = nullptr;
+    while (l < r) {
+        auto m = l + (r - l) / 2;
+        zoal::text::kerning_pair kp;
+        memcpy(&kp, m, sizeof(kp));
+        if (m->first == f) {
+            k = m;
+            break;
+        }
+
+        if (m->first < f) {
+            l = m;
+        }
+
+        if (m->first > f) {
+            r = m;
+        }
+    }
+
+    if (k == nullptr) {
+        return 0;
+    }
+
+    l = font.kerning_pairs;
+    r = l + font.kerning_pairs_count - 1;
+    for (auto p = k; p >= l; p--) {
+        zoal::text::kerning_pair kp;
+        memcpy(&kp, p, sizeof(kp));
+        if (p->second == s) {
+            return p->x_advance;
+        }
+    }
+
+    for (auto p = k; p <= r; p++) {
+        zoal::text::kerning_pair kp;
+        memcpy(&kp, p, sizeof(kp));
+        if (p->second == s) {
+            return p->x_advance;
+        }
+    }
+
+    return 0;
+}
+
 int main() {
+    int kerning = get_kerning(roboto_regular_16, 0x22u, 0x22u);
+    std::cout << "kerning: " << kerning  << std::endl;
+
     std::cout << "Begin!" << std::endl;
     graphics g;
-    zoal::gfx::glyph_render<graphics> gr(&g, &roboto_regular_24);
+    zoal::gfx::glyph_render<graphics> gr(&g, &roboto_regular_16);
 
     memset(map, '_', sizeof(map));
     for (int i = 0; i < map_width; i++) {
