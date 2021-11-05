@@ -160,10 +160,8 @@ int main() {
         map[i][map_height - 1] = '\0';
     }
 
-    map[23][0] = 'T';
-
     gr.position(0, 23);
-    gr.draw(L"ЇҐя", 1);
+    gr.draw(L"H", 1);
 
     for (int i = 0; i < map_width; i++) {
         if (*map[i] == '\0') {
