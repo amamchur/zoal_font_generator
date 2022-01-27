@@ -66,6 +66,12 @@ int main(int argc, char *argv[]) {
     if (vm.count("kern")) {
         generator.use_kern = true;
     }
+//
+//    FT_Library library;
+//    FT_Error error = FT_Init_FreeType(&library);
+//    if (error) {
+//        return -1;
+//    }
 
     generator.generate_fonts_file();
 
@@ -75,10 +81,74 @@ int main(int argc, char *argv[]) {
     g->clear(0);
     gl.color(1);
     gl.position(10, generator.current_font.y_advance);
-    text_stream << "Hello";
+    text_stream << "Hello World";
+
+//    gl.position(10, generator.current_font.y_advance * 2);
+//    gl.draw(L"Еней був парубок моторний");
+//
+//    gl.position(10, generator.current_font.y_advance * 3);
+//    gl.draw(L"І хлопець хоть куди козак,");
+//
+//    gl.position(10, generator.current_font.y_advance * 4);
+//    gl.draw(L"Удавсь на всеє зле проворний,");
+
+    gl.position(10, generator.current_font.y_advance * 2);
+    gl.draw(L"ІіЇї₴ЄєґҐ");
 
     QApplication app(argc, argv);
     MainWindow wnd;
     wnd.show();
     return app.exec();
+}
+
+const char path[] = "D:/Roboto-Regular.ttf";
+int main_() {
+    FT_Library library;
+    FT_Error error = FT_Init_FreeType(&library);
+    if (error) {
+        return -1;
+    }
+
+    FT_Face face;
+    error = FT_New_Face(library, path, 0, &face);
+    if (error) {
+        FT_Done_FreeType(library);
+        return -1;
+    }
+
+    error = FT_Set_Pixel_Sizes(face, 0, 16);
+    if (error) {
+        return -1;
+    }
+
+    FT_UInt glyph_index = FT_Get_Char_Index(face, 'H');
+    error = FT_Load_Glyph(face, glyph_index, FT_LOAD_DEFAULT);
+    if (error) {
+        return -1;
+    }
+    error = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL);
+    if (error) {
+        return -1;
+    }
+
+    FT_Bitmap *bitmap = &face->glyph->bitmap;
+    printf("pitch: %d\r\n", bitmap->pitch);
+    printf("width: %d\r\n", bitmap->width);
+    printf("rows: %d\r\n", bitmap->rows);
+
+    char str[256];
+    for (int y = 0; y < bitmap->rows; y++) {
+        uint8_t *row = bitmap->buffer + bitmap->pitch * y;
+        memset(str, 0, sizeof(str));
+        int index = 0;
+        for (int k = 0; k < bitmap->width; k++) {
+            uint8_t b = row[k];
+            str[index++] = b < 50 ? ' ' : 'X';
+        }
+        printf("%s\r\n", str);
+    }
+    printf("\r\n");
+    FT_Done_FreeType(library);
+
+    return 0;
 }

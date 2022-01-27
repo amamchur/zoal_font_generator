@@ -1,20 +1,20 @@
 #include "font_generator.h"
-#include <iostream>
-#include <cstring>
-#include <iomanip>
-#include <vector>
-#include <fstream>
-#include <string>
 #include <algorithm>
-#include <map>
+#include <cstring>
+#include <fstream>
 #include <ft2build.h>
+#include <iomanip>
+#include <iostream>
+#include <map>
+#include <string>
+#include <vector>
 #include FT_FREETYPE_H
 
-#include <boost/program_options.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/program_options.hpp>
 
 bool font_generator::in_range(FT_ULong value) {
-    for (auto &r: ranges) {
+    for (auto &r : ranges) {
         if (r.start <= value && value <= r.end) {
             return true;
         }
@@ -47,7 +47,7 @@ int font_generator::generate_fonts_file() {
         return -1;
     }
 
-    for (auto &rng: font_ranges) {
+    for (auto &rng : font_ranges) {
         std::vector<std::string> strings;
         boost::split(strings, rng, boost::is_any_of("-"));
 
@@ -96,7 +96,6 @@ void font_generator::make_range(FT_Face face, FT_ULong range_from, FT_ULong rang
         if (error) {
             continue;
         }
-
         create_bitmap_glyph(slot);
     }
 }
@@ -140,41 +139,43 @@ void font_generator::generate_src(FT_Face face) {
 }
 
 void font_generator::create_bitmap_glyph(FT_GlyphSlot slot) {
-    FT_Bitmap *bitmap = &slot->bitmap;
-    int pitch = abs(bitmap->pitch);
+    FT_Bitmap &bitmap = slot->bitmap;
     zoal::text::glyph g{};
     g.bitmap_offset = buffer.size();
     g.x_offset = (int8_t) slot->bitmap_left;
     g.y_offset = (int8_t) (-slot->bitmap_top);
-    g.width = bitmap->width;
-    g.height = bitmap->rows;
+    g.width = bitmap.width;
+    g.height = bitmap.rows;
     g.x_advance = slot->advance.x >> 6;
     glyphs.push_back(g);
 
-    for (int y = 0; y < bitmap->rows; y++) {
-        auto row = bitmap->buffer + pitch * y;
-        auto bytes = ((bitmap->width + 7) >> 3);
+    auto bytes = ((bitmap.width + 7) >> 3);
+#if 0
+    uint8_t glyph_row[32];
+    char str[256];
+    for (int y = 0; y < bitmap.rows; y++) {
+        uint8_t *row = bitmap.buffer + bitmap.pitch * y;
+        memset(str, 0, sizeof(str));
+        memset(glyph_row, 0, sizeof(glyph_row));
+        int index = 0;
+        for (int k = 0; k < bitmap.width; k++) {
+            uint8_t pixel = row[k];
+            int bt = k / 8;
+            int offset = 7 - k % 8;
+            glyph_row[bt] |= (pixel < 100 ? 0 : 1) << offset;
+
+            str[index++] = pixel < 50 ? ' ' : 'X';
+        }
+        buffer.insert(buffer.end(), glyph_row, glyph_row + bytes);
+    }
+#else
+    for (int y = 0; y < bitmap.rows; y++) {
+        auto row = bitmap.buffer + bitmap.pitch * y;
         for (int k = 0; k < bytes; k++) {
             buffer.push_back(row[k]);
         }
-#if 0
-        for (int x = 0; x < bitmap->width; x++) {
-            auto value = row[x >> 3];
-            auto b = (value & (128 >> (x & 7)))  ? 1 : 0;
-            if (b)
-                std::cout << "@";
-            else
-                std::cout << ".";
-        }
-
-        for (int k = 0; k < bytes; k++) {
-            using namespace std;
-            cout << ", 0x" << setfill('0') << setw(2) << right << hex << (int)row[k];
-        }
-
-        std::cout << std::endl;
-#endif
     }
+#endif
 }
 
 void font_generator::generate_bitmap(std::fstream &fs) {
@@ -191,7 +192,8 @@ void font_generator::generate_bitmap(std::fstream &fs) {
 
         fs << "0x" << std::setfill('0') << std::setw(2) << std::right << static_cast<int>(*ptr++) << ", ";
     }
-    fs << "0x00 };" << std::endl << std::endl;
+    fs << "0x00 };" << std::endl
+       << std::endl;
 }
 
 void font_generator::generate_glyphs(std::fstream &fs) {
@@ -214,7 +216,8 @@ void font_generator::generate_glyphs(std::fstream &fs) {
         }
     }
 
-    fs << "};" << std::endl << std::endl;
+    fs << "};" << std::endl
+       << std::endl;
 }
 
 void font_generator::generate_ranges(std::fstream &fs) {
@@ -230,14 +233,15 @@ void font_generator::generate_ranges(std::fstream &fs) {
             fs << std::endl;
         }
     }
-    fs << "};" << std::endl << std::endl;
+    fs << "};" << std::endl
+       << std::endl;
 }
 
 void font_generator::read_kering(FT_Face face) {
     FT_ULong from = 0xFFFF;
     FT_ULong to = 0x0000;
 
-    for (auto &r: ranges) {
+    for (auto &r : ranges) {
         if (from > r.start) {
             from = r.start;
         }
@@ -281,7 +285,8 @@ void font_generator::gen_kerning(std::fstream &fs, FT_Face face) {
     fs << "static const zoal::text::kerning_pair " << font_name << "_kerning[] " << progmem << " = {" << std::endl;
 
     if (!FT_HAS_KERNING(face)) {
-        fs << "};" << std::endl << std::endl;
+        fs << "};" << std::endl
+           << std::endl;
         return;
     }
 
@@ -296,7 +301,8 @@ void font_generator::gen_kerning(std::fstream &fs, FT_Face face) {
         fs << "}";
     }
 
-    fs << std::endl << "};" << std::endl;
+    fs << std::endl
+       << "};" << std::endl;
 }
 
 void font_generator::generate_font(std::fstream &fs) const {
